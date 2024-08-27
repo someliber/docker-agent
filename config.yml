@@ -1,0 +1,25 @@
+version: 0.1
+
+log:
+  fields:
+    service: registry
+
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+
+http:
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+
+proxy:
+  remoteurl: https://registry-1.docker.io #上游服务器
+  username: 你的docker hub 账号  # 使用动态输入的用户名
+  password: 你的密码  # 使用动态输入的密码
+
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

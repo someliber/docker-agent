@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  registry-mirror:
+    image: registry:2
+    container_name: registry-mirror
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config.yml:/etc/docker/registry/config.yml  # 挂载配置文件
+      - ./registry:/var/lib/registry #缓存挂载路径
+    restart: always
+    networks:
+      - nginx_registry_network
+
+  nginx-proxy:
+    image: nginx:latest
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./html:/usr/share/nginx/html:ro  # 挂载本地HTML目录到Nginx
+    depends_on:
+      - registry-mirror
+    restart: always
+    networks:
+      - nginx_registry_network
+
+networks:
+  nginx_registry_network:

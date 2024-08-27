@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status</title>
+    <style>
+        /* 引入二次元风格字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            background-color: #e0f7fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+        }
+
+        section {
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            border-radius: 15px;
+            background-color: rgba(255, 255, 255, 1); /* 透明度更高的背景 */
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15); /* 更柔和的阴影 */
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .time-box {
+            background-color: rgba(255, 255, 255, 0.6); /* 半透明背景 */
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 轻微阴影效果 */
+            display: inline-block;
+        }
+
+        .time {
+            font-size: 22px;
+            color: #0277bd;
+            text-shadow: 1px 1px #01579b;
+        }
+
+        h2 {
+            color: #0288d1; /* 调整为更柔和的蓝色 */
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px #01579b;
+        }
+
+        .status-bar {
+            background-color: #bbdeff; /* 柔和的淡蓝色背景 */
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* 调低内阴影强度 */
+        }
+
+        .status-bar span {
+            display: block;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: #fff;
+            font-weight: bold;
+            border-radius: 15px 0 0 15px;
+            text-shadow: 1px 1px rgba(0, 0, 0, 0.1); /* 调低文本阴影强度 */
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #666;
+            text-shadow: 1px 1px #01579b;
+        }
+
+        footer a {
+            color: #0288d1;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<section>
+    <!-- 时间框 -->
+    <div class="time-box">
+        <div class="time" id="timeDisplay"></div>
+    </div>
+
+    <h2>服务状态</h2>
+    <div class="status-item">
+        <div class="status-bar">
+            <span id="activeConnections" style="width: 0%; background-color: #81c784;">0%</span> <!-- 柔和的绿色 -->
+        </div>
+    </div>
+    <div class="status-item">
+        <div class="status-bar">
+            <span id="reading" style="width: 0%; background-color: #81c784;">Reading: 0</span> <!-- 柔和的绿色 -->
+        </div>
+        <div class="status-bar">
+            <span id="writing" style="width: 0%; background-color: #81c784;">Writing: 0</span> <!-- 柔和的绿色 -->
+        </div>
+        <div class="status-bar">
+            <span id="waiting" style="width: 0%; background-color: #81c784;">Waiting: 0</span> <!-- 柔和的绿色 -->
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 <a href="https://github.com/someliber/docker-transit-agent" target="_blank">someliber</a>
+    </footer>
+</section>
+
+<script>
+    // 更新时间显示
+    function updateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const date = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('timeDisplay').textContent =
+            `北京时间: ${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // 从 NGINX /nginx_status 获取数据并更新状态
+    async function fetchNginxStatus() {
+        try {
+            const response = await fetch('/nginx_status');
+            const data = await response.text();
+
+            // 解析数据
+            const lines = data.split('\n');
+            const activeConnections = parseInt(lines[0].match(/\d+/)[0]);
+            const [reading, writing, waiting] = lines[3].match(/\d+/g).map(Number);
+
+            const maxConnections = 500;
+            const maxReading = 20;
+            const maxWriting = 30;
+            const maxWaiting = 300;
+
+            updateStatusBar(document.getElementById('activeConnections'), activeConnections, maxConnections);
+            document.getElementById('activeConnections').innerText = `${activeConnections} Active Connections`;
+
+            updateStatusBar(document.getElementById('reading'), reading, maxReading);
+            document.getElementById('reading').innerText = `Reading: ${reading}`;
+
+            updateStatusBar(document.getElementById('writing'), writing, maxWriting);
+            document.getElementById('writing').innerText = `Writing: ${writing}`;
+
+            updateStatusBar(document.getElementById('waiting'), waiting, maxWaiting);
+            document.getElementById('waiting').innerText = `Waiting: ${waiting}`;
+        } catch (error) {
+            console.error('Failed to fetch NGINX status:', error);
+        }
+    }
+
+    // 更新状态栏颜色
+    function updateStatusBar(element, value, max) {
+        const percentage = (value / max) * 100;
+        let color = '#81c784'; // 柔和的绿色
+
+        if (percentage > 90) {
+            color = '#ef5350'; // 柔和的红色
+        } else if (percentage > 80) {
+            color = '#ffca28'; // 柔和的黄色
+        }
+
+        element.style.width = `${percentage}%`;
+        element.style.backgroundColor = color;
+    }
+
+    updateTime();
+    fetchNginxStatus();
+    setInterval(updateTime, 1000);  // 每秒刷新时间
+    setInterval(fetchNginxStatus, 5000);  // 每5秒刷新一次状态
+</script>
+
+</body>
+</html>
